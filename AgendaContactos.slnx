@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AgendaContactos.Back/AgendaContactos.Back.csproj" />
+  <Project Path="AgendaContactos.Tests/AgendaContactos.Tests.csproj" />
+</Solution>
