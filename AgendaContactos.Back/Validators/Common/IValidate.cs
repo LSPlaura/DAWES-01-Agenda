@@ -1,4 +1,5 @@
 using AgendaContactos.Back.Errors;
+using AgendaContactos.Back.Errors.Common;
 using CSharpFunctionalExtensions;
 
 namespace AgendaContactos.Back.Validators;
