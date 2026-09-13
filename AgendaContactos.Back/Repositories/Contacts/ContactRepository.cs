@@ -1,4 +1,6 @@
 using AgendaContactos.Back.Errors.Common;
+using AgendaContactos.Back.Errors.Contact;
+using AgendaContactos.Back.Errors.DataBase;
 using AgendaContactos.Back.Models;
 using CSharpFunctionalExtensions;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +21,7 @@ public class ContactRepository : IContactRepository
         {
             return _context.Contacts.AsQueryable().Skip(page * number).Take(number).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Enumerable.Empty<Contact>();
         }
@@ -35,7 +37,7 @@ public class ContactRepository : IContactRepository
         }
         catch (Exception ex)
         {
-            return Result.Failure<Contact, DomainError>();
+            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
         }
     }
 
@@ -46,7 +48,7 @@ public class ContactRepository : IContactRepository
             var contact = _context.Contacts.Find(key);
             if (contact == null)
             {
-                return Result.Failure<Contact, DomainError>();
+                return Result.Failure<Contact, DomainError>(new ContactError.ContactNotFoundId(key));
             }
 
             _context.Contacts.Remove(contact);
@@ -55,7 +57,7 @@ public class ContactRepository : IContactRepository
         }
         catch (Exception ex)
         {
-            return Result.Failure<Contact, DomainError>();
+            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
         }
     }
 
@@ -66,14 +68,14 @@ public class ContactRepository : IContactRepository
             var contact = _context.Contacts.Find(key);
             if (contact == null)
             {
-                return Result.Failure<Contact, DomainError>();
+                return Result.Failure<Contact, DomainError>(new ContactError.ContactNotFoundId(key));
             }
 
             return Result.Success<Contact, DomainError>(contact);
         }
         catch (Exception ex)
         {
-            return Result.Failure<Contact, DomainError>();
+            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
         }
     }
 
@@ -84,7 +86,7 @@ public class ContactRepository : IContactRepository
             var existingContact = _context.Contacts.Find(key);
             if (existingContact == null)
             {
-                return Result.Failure<Contact, DomainError>();
+                return Result.Failure<Contact, DomainError>(new ContactError.ContactNotFoundId(key));
             }
             
             var updatedContact = existingContact with
@@ -111,7 +113,7 @@ public class ContactRepository : IContactRepository
         }
         catch (Exception ex)
         {
-            return Result.Failure<Contact, DomainError>();
+            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
         }
     }
 
@@ -148,7 +150,7 @@ public class ContactRepository : IContactRepository
         }
         catch (Exception ex)
         {
-            return Result.Failure<bool, DomainError>();
+            return Result.Failure<bool, DomainError>(new DataBaseError(ex.Message));
         }
     }
 }
