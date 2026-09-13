@@ -6,7 +6,7 @@ namespace AgendaContactos.Back.Services.Crud.Contacts;
 /// <summary>
 /// Interfaz para el servicio de gestión de contactos con lógica de negocio.
 /// </summary>
-public interface IContactsService : ICrudService<string, Contact>
+public interface IContactsService : ICrudService<Contact, string>
 {
     /// <summary>
     /// Obtiene una colección de contactos filtrados por su alias.
