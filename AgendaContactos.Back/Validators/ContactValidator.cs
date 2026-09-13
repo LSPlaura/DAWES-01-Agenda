@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AgendaContactos.Back.Errors.Common;
+using AgendaContactos.Back.Errors.Contact;
 using AgendaContactos.Back.Models;
 using AgendaContactos.Back.Validators.Common;
 using CSharpFunctionalExtensions;
@@ -14,13 +15,27 @@ public class ContactValidator : IValidate<Contact>
     
     public Result<bool, DomainError> Validate(Contact item)
     {
-        if (string.IsNullOrEmpty(item.PhoneNumber)) return DomainError;
-        if (!_phoneNumberRegex.IsMatch(item.PhoneNumber)) return DomainError;
-        if (string.IsNullOrEmpty(item.Name)) return DomainError;
-        if (!_namesRegex.IsMatch(item.Name)) return DomainError;
-        if (!_namesRegex.IsMatch(item.Alias)) return DomainError;
-        if (string.IsNullOrEmpty(item.Email)) return DomainError;
-        if (!_emailRegex.IsMatch(item.Email)) return DomainError;
-        return true;
+        if (string.IsNullOrEmpty(item.PhoneNumber))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.EmptyPhoneNumber());
+
+        if (!_phoneNumberRegex.IsMatch(item.PhoneNumber))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.InvalidPhoneNumber(item.PhoneNumber));
+
+        if (string.IsNullOrEmpty(item.Name))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.EmptyName());
+
+        if (!_namesRegex.IsMatch(item.Name))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.InvalidName(item.Name));
+
+        if (!_namesRegex.IsMatch(item.Alias))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.InvalidAlias(item.Alias));
+
+        if (string.IsNullOrEmpty(item.Email))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.EmptyEmail());
+
+        if (!_emailRegex.IsMatch(item.Email))
+            return Result.Failure<bool, DomainError>(new ContactError.ValidationError.InvalidEmail(item.Email));
+
+        return Result.Success<bool, DomainError>(true);
     }
 }
