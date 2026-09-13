@@ -1,4 +1,5 @@
 using AgendaContactos.Back.Errors.Common;
+using AgendaContactos.Back.Repositories.Contacts;
 
 namespace AgendaContactos.Back.Errors.Contact;
 
@@ -33,4 +34,20 @@ public abstract record ContactError(string Message) : DomainError(Message)
         public sealed record InvalidEmail(string Email)
             : ValidationError($"Error. El email ({Email}) no tiene el formato adecuado: debe tener un mínimo de 2 carácteres para el usuario, una '@', un mínimo de 2 carácteres para el dominio, un punto y un mínimo de 2 carácteres para la extensión");
     }
+    
+    /// <summary>
+    /// Errores de contactos no encontrados en el <see cref="ContactRepository"/>
+    /// </summary>
+    public sealed record ContactNotFoundId(string Id)
+        : ContactError($"Error. Contacto con el ID [{Id}] no encontrado");
+
+    /// <summary>
+    /// Error contacto ya incoporados en el <see cref="ContactRepository"/>
+    /// </summary>
+    public sealed record ContactAlredyExist(string Id) : ContactError($"Error. El contacto con el id [{Id}] ya existe");
+    
+    /// <summary>
+    /// Error ya existe un contacto con el email dado
+    /// </summary>
+    public record class EmailAlreadyExists(string email) : ContactError($"Error. Ya existe un contacto con el email {email} asociado");
 }
