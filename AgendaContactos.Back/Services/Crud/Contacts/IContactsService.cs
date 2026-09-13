@@ -1,3 +1,4 @@
+using AgendaContactos.Back.DTOs;
 using AgendaContactos.Back.Models;
 using AgendaContactos.Back.Services.Crud.Common;
 
@@ -6,7 +7,7 @@ namespace AgendaContactos.Back.Services.Crud.Contacts;
 /// <summary>
 /// Interfaz para el servicio de gestión de contactos con lógica de negocio.
 /// </summary>
-public interface IContactsService : ICrudService<Contact, string>
+public interface IContactsService : ICrudService<ContactDto, Contact, string>
 {
     /// <summary>
     /// Obtiene una colección de contactos filtrados por su alias.
