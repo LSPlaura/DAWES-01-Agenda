@@ -8,7 +8,7 @@ public interface ICrud<TKey, TValue>
     /// <summary>
     /// Devuelve el listado completo de valores
     /// </summary>
-    IEnumerable<TValue> GetAll();
+    IEnumerable<TValue> GetAll(int page = 0, int number = 5);
 
     /// <summary>
     /// Añade la instancia al repositorio
