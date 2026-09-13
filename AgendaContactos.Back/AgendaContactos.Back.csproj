@@ -10,12 +10,13 @@
 
   <ItemGroup>
     <Folder Include="Enums\" />
-    <Folder Include="Repository\" />
     <Folder Include="Services\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="3.7.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+    <PackageReference Include="SQLite" Version="3.53.4" />
   </ItemGroup>
 
 </Project>
