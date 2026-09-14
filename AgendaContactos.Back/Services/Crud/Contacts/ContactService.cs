@@ -27,10 +27,13 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
 
         return Result.Success<ContactDto, DomainError>(dto)
             .Map(ContactNormalizer.Normalize)
-            .Ensure(
-                c => validator.Validate(c).IsSuccess, 
-                c => validator.Validate(c).Error
-            )
+            .Bind(c => 
+            {
+                var validationResult = validator.Validate(c);
+                return validationResult.IsSuccess 
+                    ? Result.Success<Contact, DomainError>(c) 
+                    : Result.Failure<Contact, DomainError>(validationResult.Error);
+            })
             .Ensure(c => !repository.ExistId(c.PhoneNumber), c => new ContactError.ContactAlredyExist(c.PhoneNumber))
             .Ensure(c => !repository.ExistsEmail(c.Email).Value, c => new ContactError.EmailAlreadyExists(c.Email))
             .Bind(c => repository.Create(c))
@@ -63,10 +66,13 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
 
         return Result.Success<string, DomainError>(key)
             .Map(_ => ContactNormalizer.Normalize(dto))
-            .Ensure(
-                c => validator.Validate(c).IsSuccess, 
-                c => validator.Validate(c).Error
-            )
+            .Bind(c => 
+            {
+                var validationResult = validator.Validate(c);
+                return validationResult.IsSuccess 
+                    ? Result.Success<Contact, DomainError>(c) 
+                    : Result.Failure<Contact, DomainError>(validationResult.Error);
+            })
             .Ensure(c => IsPhoneAvailable(key, c), c => new ContactError.ContactAlredyExist(c.PhoneNumber))
             .Ensure(c => IsEmailAvailable(key, c), c => new ContactError.EmailAlreadyExists(c.Email))
             .Bind(c => repository.Update(key, c))
