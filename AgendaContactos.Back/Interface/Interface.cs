@@ -27,9 +27,13 @@ public class Interface(IContactsService service)
                 break;
                 
             case "GET":
-                if (key != null) 
+                if (key != null && key != "all") 
                 {
                     Get(key);
+                }
+                else if (key != null && key == "all")
+                {
+                    GetAll();
                 }
                 else
                 {
@@ -125,5 +129,11 @@ public class Interface(IContactsService service)
         {
             _logger.Warning("Acción DELETE fallida para la clave {Key}: {Error}", key, result.Error.Message);
         }
+    }
+    public void GetAll()
+    {
+        _logger.Information("Ejecutando acción GET (Listar todos los contactos)");
+        var result = service.GetAll(0, 5);
+        _logger.Information("Acción GET (Listar todos) completada con éxito. Total obtenidos: {Count}", result.Count());
     }
 }
