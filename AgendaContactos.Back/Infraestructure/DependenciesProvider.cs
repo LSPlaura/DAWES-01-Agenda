@@ -40,7 +40,7 @@ public static class DependenciesProvider
     
     private static void RegisterCache(IServiceCollection services)
     {
-        services.AddSingleton<ICache<string, Contact>, LruCache>();
+        services.AddSingleton<ICache<string, Contact>, LruCache>(provider => new LruCache(3));
     }
     
     private static void RegisterValidators(IServiceCollection services)
