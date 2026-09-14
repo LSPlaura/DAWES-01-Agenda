@@ -125,7 +125,7 @@ public class ContactRepository : IContactRepository
             }
             else
             {
-                _context.Contacts.Update(updatedContact);
+                _context.Entry(existingContact).CurrentValues.SetValues(value);
             }
 
             _context.SaveChanges();
