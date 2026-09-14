@@ -14,15 +14,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Contact> Contacts { get; set; } = null!;
     
     /// <summary>
-    /// Asegura que el directorio físico de almacenamiento exista y crea la base de datos 
-    /// y sus tablas si aún no han sido creadas.
+    /// Crea la base de datos y sus tablas si aún no han sido creadas.
     /// </summary>
     public void EnsureCreated()
     {
-        if (!Directory.Exists(Configuration.Config.DataBaseFolder))
-        {
-            Directory.CreateDirectory(Configuration.Config.DataBaseFolder);
-        }
         Database.EnsureCreated();
     }
 
