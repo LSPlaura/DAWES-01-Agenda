@@ -77,7 +77,7 @@ public class Interface(IContactsService service)
 
         if (result.IsSuccess)
         {
-            _logger.Information("Acción POST completada con éxito para el teléfono: {Phone}", phone);
+            _logger.Information("Acción POST completada con éxito (201) para el teléfono: {Phone}", phone);
         }
         else
         {
@@ -92,7 +92,7 @@ public class Interface(IContactsService service)
 
         if (result.IsSuccess)
         {
-            _logger.Information("Acción GET completada con éxito para la clave: {Key}", key);
+            _logger.Information("Acción GET completada con éxito (200) para la clave: {Key}", key);
         }
         else
         {
@@ -108,7 +108,7 @@ public class Interface(IContactsService service)
 
         if (result.IsSuccess)
         {
-            _logger.Information("Acción PUT completada con éxito para la clave: {Key}", key);
+            _logger.Information("Acción PUT completada con éxito (200) para la clave: {Key}", key);
         }
         else
         {
@@ -123,7 +123,7 @@ public class Interface(IContactsService service)
 
         if (result.IsSuccess)
         {
-            _logger.Information("Acción DELETE completada con éxito para la clave: {Key}", key);
+            _logger.Information("Acción DELETE completada con éxito (200) para la clave: {Key}", key);
         }
         else
         {
@@ -134,6 +134,6 @@ public class Interface(IContactsService service)
     {
         _logger.Information("Ejecutando acción GET (Listar todos los contactos)");
         var result = service.GetAll(0, 5);
-        _logger.Information("Acción GET (Listar todos) completada con éxito. Total obtenidos: {Count}", result.Count());
+        _logger.Information("Acción GET (Listar todos) completada con éxito (200). Total obtenidos: {Count}", result.Count());
     }
 }
