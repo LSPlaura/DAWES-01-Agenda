@@ -113,8 +113,8 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
     private bool IsEmailAvailable(string key, Contact contact)
     {
         var emailCheck = repository.ExistsEmail(contact.Email);
-        if (!emailCheck.IsSuccess || !emailCheck.Value) return true;
-        
+        if (!emailCheck.IsSuccess) return false; 
+        if (!emailCheck.Value) return true;
         var currentContact = repository.GetById(key);
         return currentContact.IsSuccess && currentContact.Value.Email.Equals(contact.Email, StringComparison.OrdinalIgnoreCase);
     }
