@@ -5,12 +5,13 @@ using AgendaContactos.Back.Errors.Contact;
 using AgendaContactos.Back.Models;
 using AgendaContactos.Back.Repositories.Contacts;
 using AgendaContactos.Back.Utils;
+using AgendaContactos.Back.Validators.Common;
 using CSharpFunctionalExtensions;
 using Serilog;
 
 namespace AgendaContactos.Back.Services.Crud.Contacts;
 
-public class ContactService(IContactRepository repository, ICache<string, Contact> cache) : IContactsService
+public class ContactService(IContactRepository repository, ICache<string, Contact> cache, IValidate<Contact> validator) : IContactsService
 {
     private static readonly ILogger _logger = Log.ForContext<ContactService>();
     
@@ -26,6 +27,10 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
 
         return Result.Success<ContactDto, DomainError>(dto)
             .Map(ContactNormalizer.Normalize)
+            .Ensure(
+                c => validator.Validate(c).IsSuccess, 
+                c => validator.Validate(c).Error
+            )
             .Ensure(c => !repository.ExistId(c.PhoneNumber), c => new ContactError.ContactAlredyExist(c.PhoneNumber))
             .Ensure(c => !repository.ExistsEmail(c.Email).Value, c => new ContactError.EmailAlreadyExists(c.Email))
             .Bind(c => repository.Create(c))
@@ -57,8 +62,11 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
         _logger.Information("Intentando actualizar el contacto con clave: {Key}", key);
 
         return Result.Success<string, DomainError>(key)
-            .Ensure(k => repository.ExistId(k), k => new ContactError.ContactNotFoundId(k))
             .Map(_ => ContactNormalizer.Normalize(dto))
+            .Ensure(
+                c => validator.Validate(c).IsSuccess, 
+                c => validator.Validate(c).Error
+            )
             .Ensure(c => IsPhoneAvailable(key, c), c => new ContactError.ContactAlredyExist(c.PhoneNumber))
             .Ensure(c => IsEmailAvailable(key, c), c => new ContactError.EmailAlreadyExists(c.Email))
             .Bind(c => repository.Update(key, c))

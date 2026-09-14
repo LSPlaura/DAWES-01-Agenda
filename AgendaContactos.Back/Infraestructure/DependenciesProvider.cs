@@ -4,6 +4,8 @@ using AgendaContactos.Back.Models;
 using AgendaContactos.Back.Repositories;
 using AgendaContactos.Back.Repositories.Contacts;
 using AgendaContactos.Back.Services.Crud.Contacts;
+using AgendaContactos.Back.Validators;
+using AgendaContactos.Back.Validators.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +19,7 @@ public static class DependenciesProvider
         
         RegisterRepository(services);
         RegisterCache(services);
+        RegisterValidators(services);
         RegisterServices(services);
         
         return services.BuildServiceProvider();
@@ -40,11 +43,17 @@ public static class DependenciesProvider
         services.AddSingleton<ICache<string, Contact>, LruCache>();
     }
     
+    private static void RegisterValidators(IServiceCollection services)
+    {
+        services.AddTransient<IValidate<Contact>>(sp => new ContactValidator());
+    }
+    
     private static void RegisterServices(IServiceCollection services)
     {
         services.AddTransient<IContactsService, ContactService>(sp => new ContactService(
             sp.GetRequiredService<IContactRepository>(),
-            sp.GetRequiredService<ICache<string, Contact>>()
+            sp.GetRequiredService<ICache<string, Contact>>(),
+            sp.GetRequiredService<IValidate<Contact>>()
         ));
     }
 }
