@@ -12,7 +12,7 @@ public class ContactValidator : IValidate<Contact>
 {
     private static readonly ILogger _logger = Log.ForContext<ContactValidator>();
     private static Regex _phoneNumberRegex = new(@"^\+[1-9]\d{6,14}$");
-    private static Regex _namesRegex = new(@"^[a-zA-Z0-9._%+-]{1,100}$");
+    private static Regex _namesRegex = new(@"^[\s\S]{1,100}$");
     private static Regex _emailRegex = new(@"^[a-zA-Z0-9._%+-]{2,}@[a-zA-Z0-9.-]{2,}\.[a-zA-Z]{2,}$");
     
     public Result<bool, DomainError> Validate(Contact item)
