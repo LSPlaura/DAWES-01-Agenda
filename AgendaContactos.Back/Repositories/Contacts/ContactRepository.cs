@@ -161,7 +161,7 @@ public class ContactRepository : IContactRepository
         _logger.Information("Buscando contactos por alias: {Alias}", alias);
         try
         {
-            var list = _context.Contacts.Where(c => c.Alias == alias).ToList();
+            var list = _context.Contacts.Where(c => c.Alias.ToLower() == alias.ToLower()).ToList();
             _logger.Information("Se encontraron {Count} contactos con el alias {Alias}", list.Count, alias);
             return list;
         }
