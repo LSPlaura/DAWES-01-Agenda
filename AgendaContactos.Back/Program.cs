@@ -42,17 +42,20 @@ using Serilog;
         // ==========================================
         Log.Information("--- FASE 2: Probando Casos de Éxito ---");
 
-        // 1. Consultar de forma individual a un contacto recién creado
+        // // 1. Consultar de forma individual a un contacto recién creado
         interfaceSimulator.Operate("GET", key: "+34611111111");
-
-        // 2. Listar todos los contactos de la agenda (paginación por defecto 0,5)
+        //
+        // // 2. Listar todos los contactos de la agenda (paginación por defecto 0,5)
         interfaceSimulator.Operate("GET", key: "all");
-
-        // 3. Actualizar datos de un contacto existente (PUT Success)
+        //
+        // // 3. Actualizar datos de un contacto existente (PUT Success)
         interfaceSimulator.Operate("PUT", key: "+34611111111", phone: "+34611111111", name: "Carlos Alberto Perez", alias: "Charlie Boss", email: "carlos.boss@test.com");
-
-        // 4. Eliminar un contacto existente
+        //
+        // // 4. Eliminar un contacto existente
         interfaceSimulator.Operate("DELETE", key: "+34699999999");
+        
+        // 5. Eliminar un contacto existente
+        interfaceSimulator.Operate("GET", alias: "charlie");
 
 
         // ==========================================

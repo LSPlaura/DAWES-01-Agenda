@@ -35,6 +35,10 @@ public class Interface(IContactsService service)
                 {
                     GetAll();
                 }
+                else if (key == null && alias != null)
+                {
+                    GetByAlias(alias);
+                }
                 else
                 {
                     _logger.Warning("Operación GET omitida: Falta la clave (key).");
@@ -98,6 +102,13 @@ public class Interface(IContactsService service)
         {
             _logger.Warning("Acción GET fallida para la clave {Key}: {Error}", key, result.Error.Message);
         }
+    }
+    
+    public void GetByAlias(string alias)
+    {
+        _logger.Information("Ejecutando acción GET (obtener mediante alias) ");
+        var result = service.GetByAlias(alias);
+        _logger.Information("Acción GET (obtener mediante alias) completada con éxito (200). Total obtenidos: {Count}", result.Count());
     }
 
     public void Put(string key, string phone, string name, string alias, string email)
