@@ -1106,7 +1106,7 @@
             <line number="6" hits="460" branch="False" />
           </lines>
         </class>
-        <class name="AgendaContactos.Back.Interface.Interface" filename="Interface/Interface.cs" line-rate="0" branch-rate="0" complexity="52">
+        <class name="AgendaContactos.Back.Controller.Controller" filename="Controller/Controller.cs" line-rate="0" branch-rate="0" complexity="52">
           <methods>
             <method name="Operate" signature="(System.String,System.String,System.String,System.String,System.String,System.String)" line-rate="0" branch-rate="0" complexity="40">
               <lines>

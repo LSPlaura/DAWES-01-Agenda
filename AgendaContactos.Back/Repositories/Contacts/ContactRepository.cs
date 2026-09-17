@@ -2,6 +2,7 @@ using AgendaContactos.Back.Errors.Common;
 using AgendaContactos.Back.Errors.Contact;
 using AgendaContactos.Back.Errors.DataBase;
 using AgendaContactos.Back.Models;
+using AgendaContactos.Back.Models.Enums;
 using CSharpFunctionalExtensions;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -18,23 +19,28 @@ public class ContactRepository : IContactRepository
         _context = context;
     }
 
-    public IEnumerable<Contact> GetAll(int page = 0, int number = 5)
+    public Result<(Response, IEnumerable<Contact>), (Response, DomainError)> GetAll(int page = 0, int number = 5)
     {
         _logger.Information("Obteniendo página {Page} de contactos (tamaño: {Number})", page, number);
         try
         {
-            var result = _context.Contacts.AsQueryable().Skip(page * number).Take(number).ToList();
+            var result = _context.Contacts
+                .AsNoTracking()
+                .Skip(page * number)
+                .Take(number)
+                .ToList();
+
             _logger.Information("Se obtuvieron {Count} contactos correctamente", result.Count);
-            return result;
+            return Result.Success<(Response, IEnumerable<Contact>), (Response, DomainError)>((Response.Ok, result));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al obtener el listado de contactos");
-            return Enumerable.Empty<Contact>();
+            return Result.Failure<(Response, IEnumerable<Contact>), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 
-    public Result<Contact, DomainError> Create(Contact value)
+    public Result<(Response, Contact), (Response, DomainError)> Create(Contact value)
     {
         _logger.Information("Insertando nuevo contacto en base de datos: {Phone}", value.PhoneNumber);
         try
@@ -42,16 +48,17 @@ public class ContactRepository : IContactRepository
             _context.Contacts.Add(value);
             _context.SaveChanges();
             _logger.Information("Contacto creado exitosamente en base de datos: {Phone}", value.PhoneNumber);
-            return Result.Success<Contact, DomainError>(value);
+            
+            return Result.Success<(Response, Contact), (Response, DomainError)>((Response.Created, value));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al crear el contacto {Phone} en base de datos", value.PhoneNumber);
-            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
+            return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 
-    public Result<Contact, DomainError> Delete(string key)
+    public Result<(Response, Contact), (Response, DomainError)> Delete(string key)
     {
         _logger.Information("Intentando eliminar contacto con clave: {Key}", key);
         try
@@ -60,22 +67,23 @@ public class ContactRepository : IContactRepository
             if (contact == null)
             {
                 _logger.Warning("No se encontró el contacto con clave {Key} para eliminar", key);
-                return Result.Failure<Contact, DomainError>(new ContactError.ContactNotFoundId(key));
+                return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.NotFound, new ContactError.ContactNotFoundId(key)));
             }
 
             _context.Contacts.Remove(contact);
             _context.SaveChanges();
             _logger.Information("Contacto eliminado correctamente de la base de datos: {Key}", key);
-            return Result.Success<Contact, DomainError>(contact);
+            
+            return Result.Success<(Response, Contact), (Response, DomainError)>((Response.Ok, contact));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al eliminar el contacto {Key}", key);
-            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
+            return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 
-    public Result<Contact, DomainError> GetById(string key)
+    public Result<(Response, Contact), (Response, DomainError)> GetById(string key)
     {
         _logger.Information("Buscando contacto por ID/Teléfono: {Key}", key);
         try
@@ -84,20 +92,20 @@ public class ContactRepository : IContactRepository
             if (contact == null)
             {
                 _logger.Warning("Contacto no encontrado con clave: {Key}", key);
-                return Result.Failure<Contact, DomainError>(new ContactError.ContactNotFoundId(key));
+                return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.NotFound, new ContactError.ContactNotFoundId(key)));
             }
 
             _logger.Information("Contacto encontrado: {Key}", key);
-            return Result.Success<Contact, DomainError>(contact);
+            return Result.Success<(Response, Contact), (Response, DomainError)>((Response.Ok, contact));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al buscar el contacto por ID {Key}", key);
-            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
+            return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 
-    public Result<Contact, DomainError> Update(string key, Contact value)
+    public Result<(Response, Contact), (Response, DomainError)> Update(string key, Contact value)
     {
         _logger.Information("Actualizando contacto con clave: {Key}", key);
         try
@@ -106,7 +114,7 @@ public class ContactRepository : IContactRepository
             if (existingContact == null)
             {
                 _logger.Warning("No se encontró el contacto con clave {Key} para actualizar", key);
-                return Result.Failure<Contact, DomainError>(new ContactError.ContactNotFoundId(key));
+                return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.NotFound, new ContactError.ContactNotFoundId(key)));
             }
             
             var updatedContact = existingContact with
@@ -131,12 +139,12 @@ public class ContactRepository : IContactRepository
             _context.SaveChanges();
             _logger.Information("Contacto actualizado con éxito: {Phone}", updatedContact.PhoneNumber);
 
-            return Result.Success<Contact, DomainError>(updatedContact);
+            return Result.Success<(Response, Contact), (Response, DomainError)>((Response.Ok, updatedContact));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al actualizar el contacto con clave {Key}", key);
-            return Result.Failure<Contact, DomainError>(new DataBaseError(ex.Message));
+            return Result.Failure<(Response, Contact), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 
@@ -156,35 +164,39 @@ public class ContactRepository : IContactRepository
         }
     }
 
-    public IEnumerable<Contact> GetByAlias(string alias)
+    public Result<(Response, IEnumerable<Contact>), (Response, DomainError)> GetByAlias(string alias)
     {
         _logger.Information("Buscando contactos por alias: {Alias}", alias);
         try
         {
-            var list = _context.Contacts.Where(c => c.Alias.ToLower() == alias.ToLower()).ToList();
+            var list = _context.Contacts
+                .AsNoTracking()
+                .Where(c => c.Alias.ToLower() == alias.ToLower())
+                .ToList();
+
             _logger.Information("Se encontraron {Count} contactos con el alias {Alias}", list.Count, alias);
-            return list;
+            return Result.Success<(Response, IEnumerable<Contact>), (Response, DomainError)>((Response.Ok, list));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al buscar contactos por alias {Alias}", alias);
-            return Enumerable.Empty<Contact>();
+            return Result.Failure<(Response, IEnumerable<Contact>), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 
-    public Result<bool, DomainError> ExistsEmail(string email)
+    public Result<(Response, bool), (Response, DomainError)> ExistsEmail(string email)
     {
         _logger.Information("Comprobando existencia de email: {Email}", email);
         try
         {
             var exists = _context.Contacts.Any(c => c.Email == email);
             _logger.Information("Resultado de existencia para email {Email}: {Exists}", email, exists);
-            return Result.Success<bool, DomainError>(exists);
+            return Result.Success<(Response, bool), (Response, DomainError)>((Response.Ok, exists));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Error al comprobar existencia de email {Email}", email);
-            return Result.Failure<bool, DomainError>(new DataBaseError(ex.Message));
+            return Result.Failure<(Response, bool), (Response, DomainError)>((Response.Conflict, new DataBaseError(ex.Message)));
         }
     }
 }

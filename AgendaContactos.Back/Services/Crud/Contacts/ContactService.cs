@@ -1,8 +1,11 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using AgendaContactos.Back.Cache.Common;
 using AgendaContactos.Back.DTOs;
 using AgendaContactos.Back.Errors.Common;
 using AgendaContactos.Back.Errors.Contact;
 using AgendaContactos.Back.Models;
+using AgendaContactos.Back.Models.Enums;
 using AgendaContactos.Back.Repositories.Contacts;
 using AgendaContactos.Back.Utils;
 using AgendaContactos.Back.Validators.Common;
@@ -14,97 +17,124 @@ namespace AgendaContactos.Back.Services.Crud.Contacts;
 public class ContactService(IContactRepository repository, ICache<string, Contact> cache, IValidate<Contact> validator) : IContactsService
 {
     private static readonly ILogger _logger = Log.ForContext<ContactService>();
-    
-    public IEnumerable<Contact> GetAll(int page = 0, int number = 5)
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNameCaseInsensitive = true
+    };
+
+    public Result<(Response, string), (Response, DomainError)> GetAll(int page = 0, int number = 5)
     {
         _logger.Information("Obteniendo listado de contactos (Página: {Page}, Cantidad: {Number})", page, number);
-        return repository.GetAll(page, number);
+
+        return repository.GetAll(page, number)
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)));
     }
 
-    public Result<Contact, DomainError> Create(ContactDto dto)
+    public Result<(Response, string), (Response, DomainError)> Create(ContactDto contact)
     {
-        _logger.Information("Intentando crear un nuevo contacto con teléfono: {Phone}", dto.PhoneNumber);
+        _logger.Information("Intentando crear un nuevo contacto con teléfono: {Phone}", contact.PhoneNumber);
 
-        return Result.Success<ContactDto, DomainError>(dto)
+        return Result.Success<ContactDto, (Response, DomainError)>(contact)
             .Map(ContactNormalizer.Normalize)
             .Bind(c => 
             {
                 var validationResult = validator.Validate(c);
                 return validationResult.IsSuccess 
-                    ? Result.Success<Contact, DomainError>(c) 
-                    : Result.Failure<Contact, DomainError>(validationResult.Error);
+                    ? Result.Success<Contact, (Response, DomainError)>(c) 
+                    : Result.Failure<Contact, (Response, DomainError)>((Response.BadRequest, validationResult.Error));
             })
-            .Ensure(c => !repository.ExistId(c.PhoneNumber), c => new ContactError.ContactAlredyExist(c.PhoneNumber))
-            .Ensure(c => !repository.ExistsEmail(c.Email).Value, c => new ContactError.EmailAlreadyExists(c.Email))
-            .Bind(c => repository.Create(c))
-            .Tap(c => 
+            .Ensure(c => !repository.ExistId(c.PhoneNumber), 
+                c => (Response.Conflict, new ContactError.ContactAlredyExist(c.PhoneNumber)))
+            .Bind(c => 
             {
-                cache.Add(c.PhoneNumber, c);
-                _logger.Information("Contacto creado y cacheado con éxito: {Phone}", c.PhoneNumber);
+                var emailCheck = repository.ExistsEmail(c.Email);
+                if (emailCheck.IsFailure) return Result.Failure<Contact, (Response, DomainError)>(emailCheck.Error);
+                if (emailCheck.Value.Item2) return Result.Failure<Contact, (Response, DomainError)>((Response.Conflict, new ContactError.EmailAlreadyExists(c.Email)));
+                return Result.Success<Contact, (Response, DomainError)>(c);
             })
-            .TapError(err => _logger.Warning("Fallo al crear contacto: {Error}", err.Message));
+            .Bind(repository.Create)
+            .Tap(res => 
+            {
+                cache.Add(res.Item2.PhoneNumber, res.Item2);
+                _logger.Information("Contacto creado y cacheado con éxito: {Phone}", res.Item2.PhoneNumber);
+            })
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .TapError(err => _logger.Warning("Fallo al crear contacto: {Error}", err.Item2.Message));
     }
 
-    public Result<Contact, DomainError> Delete(string key)
+    public Result<(Response, string), (Response, DomainError)> Delete(string key)
     {
         _logger.Information("Intentando eliminar el contacto con clave: {Key}", key);
 
-        return Result.Success<string, DomainError>(key)
-            .Ensure(k => repository.ExistId(k), k => new ContactError.ContactNotFoundId(k))
-            .Bind(k => repository.Delete(k))
-            .Tap(c => 
+        return repository.Delete(key)
+            .Tap(res => 
             {
-                cache.Delete(c.PhoneNumber);
-                _logger.Information("Contacto eliminado con éxito: {Phone}", c.PhoneNumber);
+                cache.Delete(res.Item2.PhoneNumber);
+                _logger.Information("Contacto eliminado con éxito de la caché: {Phone}", res.Item2.PhoneNumber);
             })
-            .TapError(err => _logger.Warning("Fallo al eliminar contacto ({Key}): {Error}", key, err.Message));
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .TapError(err => _logger.Warning("Fallo al eliminar contacto ({Key}): {Error}", key, err.Item2.Message));
     }
 
-    public Result<Contact, DomainError> Update(string key, ContactDto dto)
+    public Result<(Response, string), (Response, DomainError)> Update(string key, ContactDto dto)
     {
         _logger.Information("Intentando actualizar el contacto con clave: {Key}", key);
 
-        return Result.Success<string, DomainError>(key)
+        return Result.Success<string, (Response, DomainError)>(key)
             .Map(_ => ContactNormalizer.Normalize(dto))
             .Bind(c => 
             {
                 var validationResult = validator.Validate(c);
                 return validationResult.IsSuccess 
-                    ? Result.Success<Contact, DomainError>(c) 
-                    : Result.Failure<Contact, DomainError>(validationResult.Error);
+                    ? Result.Success<Contact, (Response, DomainError)>(c) 
+                    : Result.Failure<Contact, (Response, DomainError)>((Response.BadRequest, validationResult.Error));
             })
-            .Ensure(c => IsPhoneAvailable(key, c), c => new ContactError.ContactAlredyExist(c.PhoneNumber))
-            .Ensure(c => IsEmailAvailable(key, c), c => new ContactError.EmailAlreadyExists(c.Email))
+            .Ensure(c => IsPhoneAvailable(key, c), 
+                c => (Response.Conflict, new ContactError.ContactAlredyExist(c.PhoneNumber)))
+            .Ensure(c => IsEmailAvailable(key, c), 
+                c => (Response.Conflict, new ContactError.EmailAlreadyExists(c.Email)))
             .Bind(c => repository.Update(key, c))
-            .Tap(c => 
+            .Tap(res => 
             {
-                cache.Add(c.PhoneNumber, c);
-                _logger.Information("Contacto actualizado con éxito: {Phone}", c.PhoneNumber);
+                cache.Add(res.Item2.PhoneNumber, res.Item2);
+                _logger.Information("Contacto actualizado con éxito: {Phone}", res.Item2.PhoneNumber);
             })
-            .TapError(err => _logger.Warning("Fallo al actualizar contacto ({Key}): {Error}", key, err.Message));
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .TapError(err => _logger.Warning("Fallo al actualizar contacto ({Key}): {Error}", key, err.Item2.Message));
     }
 
-    public Result<Contact, DomainError> GetById(string key)
+    public Result<(Response, string), (Response, DomainError)> GetById(string key)
     {
         _logger.Information("Consultando contacto por ID/Teléfono: {Key}", key);
 
-        return cache.Obtain(key) is { } contact 
-            ? Result.Success<Contact, DomainError>(contact).Tap(_ => _logger.Information("Contacto obtenido desde la caché: {Key}", key))
-            : repository.GetById(key)
-                .Tap(c => 
-                {
-                    cache.Add(c.PhoneNumber, c);
-                    _logger.Information("Contacto obtenido desde la base de datos y cacheado: {Key}", key);
-                })
-                .TapError(_ => _logger.Warning("Contacto no encontrado: {Key}", key));
+        var cachedContact = cache.Obtain(key);
+        if (cachedContact is not null)
+        {
+            _logger.Information("Contacto obtenido desde la caché: {Key}", key);
+            return Result.Success<(Response, string), (Response, DomainError)>(
+                (Response.Ok, JsonSerializer.Serialize(cachedContact, JsonOptions)));
+        }
+
+        return repository.GetById(key)
+            .Tap(res => 
+            {
+                cache.Add(res.Item2.PhoneNumber, res.Item2);
+                _logger.Information("Contacto obtenido desde la base de datos y cacheado: {Key}", key);
+            })
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .TapError(_ => _logger.Warning("Contacto no encontrado en repositorio: {Key}", key));
     }
 
-    public IEnumerable<Contact> GetByAlias(string alias)
+    public Result<(Response, string), (Response, DomainError)> GetByAlias(string alias)
     {
         _logger.Information("Buscando contactos por alias: {Alias}", alias);
-        return repository.GetByAlias(alias);
+
+        return repository.GetByAlias(alias)
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)));
     }
-    
+
     private bool IsPhoneAvailable(string key, Contact contact)
     {
         return contact.PhoneNumber == key || !repository.ExistId(contact.PhoneNumber);
@@ -113,9 +143,10 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
     private bool IsEmailAvailable(string key, Contact contact)
     {
         var emailCheck = repository.ExistsEmail(contact.Email);
-        if (!emailCheck.IsSuccess) return false; 
-        if (!emailCheck.Value) return true;
+        if (emailCheck.IsFailure) return false; 
+        if (!emailCheck.Value.Item2) return true;
+        
         var currentContact = repository.GetById(key);
-        return currentContact.IsSuccess && currentContact.Value.Email.Equals(contact.Email, StringComparison.OrdinalIgnoreCase);
+        return currentContact.IsSuccess && currentContact.Value.Item2.Email.Equals(contact.Email, StringComparison.OrdinalIgnoreCase);
     }
 }
