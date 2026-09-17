@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using AgendaContactos.Back.Cache.Common;
+using AgendaContactos.Back.Configuration;
 using AgendaContactos.Back.DTOs;
 using AgendaContactos.Back.Errors.Common;
 using AgendaContactos.Back.Errors.Contact;
@@ -17,19 +18,13 @@ namespace AgendaContactos.Back.Services.Crud.Contacts;
 public class ContactService(IContactRepository repository, ICache<string, Contact> cache, IValidate<Contact> validator) : IContactsService
 {
     private static readonly ILogger _logger = Log.ForContext<ContactService>();
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        PropertyNameCaseInsensitive = true
-    };
-
+    
     public Result<(Response, string), (Response, DomainError)> GetAll(int page = 0, int number = 5)
     {
         _logger.Information("Obteniendo listado de contactos (Página: {Page}, Cantidad: {Number})", page, number);
 
         return repository.GetAll(page, number)
-            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)));
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, Config.JsonOptions)));
     }
 
     public Result<(Response, string), (Response, DomainError)> Create(ContactDto contact)
@@ -60,7 +55,7 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
                 cache.Add(res.Item2.PhoneNumber, res.Item2);
                 _logger.Information("Contacto creado y cacheado con éxito: {Phone}", res.Item2.PhoneNumber);
             })
-            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, Config.JsonOptions)))
             .TapError(err => _logger.Warning("Fallo al crear contacto: {Error}", err.Item2.Message));
     }
 
@@ -74,7 +69,7 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
                 cache.Delete(res.Item2.PhoneNumber);
                 _logger.Information("Contacto eliminado con éxito de la caché: {Phone}", res.Item2.PhoneNumber);
             })
-            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, Config.JsonOptions)))
             .TapError(err => _logger.Warning("Fallo al eliminar contacto ({Key}): {Error}", key, err.Item2.Message));
     }
 
@@ -101,7 +96,7 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
                 cache.Add(res.Item2.PhoneNumber, res.Item2);
                 _logger.Information("Contacto actualizado con éxito: {Phone}", res.Item2.PhoneNumber);
             })
-            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, Config.JsonOptions)))
             .TapError(err => _logger.Warning("Fallo al actualizar contacto ({Key}): {Error}", key, err.Item2.Message));
     }
 
@@ -114,7 +109,7 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
         {
             _logger.Information("Contacto obtenido desde la caché: {Key}", key);
             return Result.Success<(Response, string), (Response, DomainError)>(
-                (Response.Ok, JsonSerializer.Serialize(cachedContact, JsonOptions)));
+                (Response.Ok, JsonSerializer.Serialize(cachedContact, Config.JsonOptions)));
         }
 
         return repository.GetById(key)
@@ -123,7 +118,7 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
                 cache.Add(res.Item2.PhoneNumber, res.Item2);
                 _logger.Information("Contacto obtenido desde la base de datos y cacheado: {Key}", key);
             })
-            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)))
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, Config.JsonOptions)))
             .TapError(_ => _logger.Warning("Contacto no encontrado en repositorio: {Key}", key));
     }
 
@@ -132,7 +127,7 @@ public class ContactService(IContactRepository repository, ICache<string, Contac
         _logger.Information("Buscando contactos por alias: {Alias}", alias);
 
         return repository.GetByAlias(alias)
-            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, JsonOptions)));
+            .Map(res => (res.Item1, JsonSerializer.Serialize(res.Item2, Config.JsonOptions)));
     }
 
     private bool IsPhoneAvailable(string key, Contact contact)
